@@ -39,15 +39,17 @@ int main(int argc, char **argv) {
 
   mat a, b, c;
 
-  if (argc < 2) {
-    printf("usage: %s N\n", argv[0]);
+  if (argc < 6) {
+    printf("usage: %s M N K At Bt\n", argv[0]);
     return -1;
   }
 
-  unsigned n = strtoul(argv[1], NULL, 10);
-  unsigned M = n;
-  unsigned N = n;
-  unsigned K = n;
+  unsigned M = strtoul(argv[1], NULL, 10);
+  unsigned N = strtoul(argv[2], NULL, 10);
+  unsigned K = strtoul(argv[3], NULL, 10);
+
+  unsigned TA = strtoul(argv[4], NULL, 10);
+  unsigned TB = strtoul(argv[5], NULL, 10);
 
   mat_alloc(&a, M, K);
   mat_alloc(&b, K, N);
@@ -60,16 +62,18 @@ int main(int argc, char **argv) {
   for (int i=0; i<b.r*b.c; i++)
     b.data[i] = randn(0, 1);
 
-  printf("M = %d, N = %d, K = %d\n", M, N, K);
-  timeit(mmul0(&c, &a, &b, 0, 0));
+  printf("M = %d, N = %d, K = %d, TA = %d, TB = %d\n", M, N, K, TA, TB);
+
+  //timeit(mmul0(&c, &a, &b, TA, TB));
+  timeit(mmul1(&c, &a, &b, TA, TB));
 
   mat_dump(&a, "a.bin");
   mat_dump(&b, "b.bin");
   mat_dump(&c, "c.bin");
 
-  //mat_print(&a);
-  //mat_print(&b);
-  //mat_print(&c);
+  mat_print(&a);
+  mat_print(&b);
+  mat_print(&c);
 
   mat_free(&a);
   mat_free(&b);
@@ -94,9 +98,9 @@ void mmul0(mat * restrict c,
   float alpha = 1.0f;
   float beta = 1.0f;
 
-  int lda = transA ? K : M;
-  int ldb = transB ? N : K;
-  int ldc = M;
+  int lda = transA ? M : K;
+  int ldb = transB ? K : N;
+  int ldc = N;
 
   cblas_sgemm( CblasRowMajor, at, bt, M, N, K,
                alpha,
@@ -124,7 +128,7 @@ void mmul1(mat * mc,
     for (int i=0; i<M; i++)
     for (int j=0; j<N; j++)
     for (int k=0; k<K; k++)
-      c[j*M+i] += a[k*M+i] * b[k+K*j];
+      c[i*N+j] += a[i*K+k] * b[j+N*k];
   }
 
   //TN
@@ -132,7 +136,7 @@ void mmul1(mat * mc,
     for (int j=0; j<N; j++)
     for (int i=0; i<M; i++)
     for (int k=0; k<K; k++)
-      c[j*M+i] += a[k+K*i] * b[k+K*j];
+      c[i*N+j] += a[i+M*k] * b[j+N*k];
   }
 
   //NT
@@ -140,7 +144,7 @@ void mmul1(mat * mc,
     for (int i=0; i<M; i++)
     for (int j=0; j<N; j++)
     for (int k=0; k<K; k++)
-      c[j*M+i] += a[k*M+i] * b[k*N+j];
+      c[i*N+j] += a[i*K+k] * b[j*N+k];
   }
 
   //TT
@@ -148,6 +152,6 @@ void mmul1(mat * mc,
     for (int j=0; j<N; j++)
     for (int i=0; i<M; i++)
     for (int k=0; k<K; k++)
-      c[j*M+i] += a[k+K*i] * b[k*N+j];
+      c[i*N+j] += a[i+M*k] * b[j*N+k];
   }
 }
